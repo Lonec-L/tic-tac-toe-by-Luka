@@ -1,0 +1,8 @@
+{
+    "name": "Tic-tac-toe by Luka",
+    "version": "0.0.1",
+    "description": "",
+    "dependencies": {
+        "express": "^4.18.1"
+    }
+}

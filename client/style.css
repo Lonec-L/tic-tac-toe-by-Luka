@@ -1,0 +1,62 @@
+*{
+    padding: 0;
+    border: 0;
+    margin: 0;
+}
+
+body{
+    background-color: darkgrey;
+}
+
+#gameContainer{
+    height: 90vw;
+    width: 90vw;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    background-color: white;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+    display: inline-block;
+    width: 100%;
+}
+
+#message{
+    font-size: xx-large;
+    color: black;
+}
+
+i {
+    text-align:center;
+}
+
+.gameTile{
+    margin: 1vw;
+    width: 28vw;
+    height: 28vw;
+    background-color: burlywood;
+    display: grid;
+    font-size: 28vw;
+}
+
+@media (orientation:landscape) {
+    #gameContainer{
+        height: 90vh;
+        width: 90vh;
+    }
+
+    .gameTile{
+        margin: 1vh;
+        width: 28vh;
+        height: 28vh;
+	font-size: 28vh;
+    }
+
+}
