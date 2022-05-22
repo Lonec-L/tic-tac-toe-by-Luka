@@ -29,6 +29,11 @@ function playGame(){
     socket.emit("play");
 }
 
+socket.on("reconnected", ()=>{
+    document.getElementById("PlayButton").style.display = "none";
+    document.getElementById("player").innerHTML = cookie.get("username");
+})
+
 socket.on("connect", () => {
     console.log(socket.id);
 });

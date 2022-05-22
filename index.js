@@ -23,7 +23,25 @@ const getScoketId = new Map();
 
 const cookie = require("cookie")
 
-io.on('connection', (socket) => {  
+io.on('connection', (socket) => {
+    if(socket.handshake.headers.cookie){
+        var cookies = cookie.parse(socket.handshake.headers.cookie);
+        var game = games.get(now_playing.get(cookies.ID));
+        if(now_playing.get(cookies.ID)){
+            var game = games.get(now_playing.get(cookies.ID));
+            socket.join(game.ID);
+            io.to(game.ID).emit("update", game.state);
+            if(cookies.ID == game.hasTurn)socket.emit("yourTurn");
+            else socket.emit("opponentsTurn");
+
+            if(cookies.ID == game.p1)socket.emit("opponentName", game.name2);
+            else socket.emit("opponentName", game.name1);
+            game.dcCount--;
+            socket.emit("reconnected");
+        }
+    }
+    
+
     socket.on('move', (tile) => {
         var cookies = cookie.parse(socket.handshake.headers.cookie);
         var game = games.get(now_playing.get(cookies.ID));
@@ -57,18 +75,7 @@ io.on('connection', (socket) => {
     socket.on("play",()=>{
         var cookies = cookie.parse(socket.handshake.headers.cookie);
         getScoketId.set(cookies.ID, socket.id);
-        if(now_playing.get(cookies.ID)){
-            var game = games.get(now_playing.get(cookies.ID));
-            socket.join(game.ID);
-            io.to(game.ID).emit("update", game.state);
-            if(cookies.ID == game.hasTurn)socket.emit("yourTurn");
-            else socket.emit("opponentsTurn");
-
-            if(cookies.ID == game.name1)socket.emit("opponentName", game.name2);
-            else socket.emit("opponentName", game.name1);
-            game.dcCount--;
-        }
-        else if(!waitingForGame){
+        if(!waitingForGame){
             waitingForGame = cookies.ID;
             waitingName = cookies.username;
             nextGameId = randomId();
