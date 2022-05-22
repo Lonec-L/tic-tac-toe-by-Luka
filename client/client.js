@@ -53,23 +53,18 @@ function refresh(){
     location.reload();
 }
 
-socket.on("ragequit", ()=>{
-    message.innerHTML = "your opponent ragequit!\n refresing in 5s"
-    setTimeout(refresh, 5000);
-})
-
 socket.on("win", ()=>{
-    message.innerHTML = "WINNNER WINNER, CHICKEN DINNER!\n refreshing in 5s";
+    message.innerHTML = "WINNNER WINNER, CHICKEN DINNER!";
     document.getElementById("PlayButton").style.display = "block";
 })
 
 socket.on("tie", ()=>{
-    message.innerHTML = "TIE :3\n refreshing in 5s";
+    message.innerHTML = "TIE :3";
     document.getElementById("PlayButton").style.display = "block";
 })
 
 socket.on("lose", ()=>{
-    message.innerHTML = "loser!\n refreshing in 5s";
+    message.innerHTML = "loser!";
     document.getElementById("PlayButton").style.display = "block";
 })
 
