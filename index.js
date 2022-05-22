@@ -11,6 +11,7 @@ app.use(express.static(__dirname + '/client'));
 const { Game } = require('./game');
 
 var waitingForGame = undefined;
+var waitingName = undefined;
 var nextGameId = undefined;
 
 const games = new Map();
@@ -18,21 +19,33 @@ const crypto = require("crypto");
 const randomId = () => crypto.randomBytes(8).toString("hex");
 
 const now_playing = new Map();
+const getScoketId = new Map();
 
-io.on('connection', (socket) => {
+const cookie = require("cookie")
+
+io.on('connection', (socket) => {  
     socket.on('move', (tile) => {
-        var game = games.get(now_playing.get(socket.id));
+        var cookies = cookie.parse(socket.handshake.headers.cookie);
+        var game = games.get(now_playing.get(cookies.ID));
         if(!game)return;
-        var tmp = game.move(socket.id, tile);
+        var tmp = game.move(cookies.ID, tile);
         if(tmp == 1){
             io.to(game.ID).emit("update", game.state);
             game.flipTurn();
+            socket.to(game.ID).emit("yourTurn");
+            socket.emit("opponentsTurn");
             var win = game.checkWin();
             if(win == -1){
                 io.to(game.ID).emit("tie");
+                now_playing.delete(game.p1);
+                now_playing.delete(game.p2);
+                games.delete(game.ID);
             } else if(win != 0){
                 socket.emit("win");
                 socket.to(game.ID).emit("lose");
+                now_playing.delete(game.p1);
+                now_playing.delete(game.p2);
+                games.delete(game.ID);
             }
         } else if(tmp == 10){
             socket.emit("invalidMove");
@@ -41,34 +54,60 @@ io.on('connection', (socket) => {
         }
     })
 
-    if(!waitingForGame){
-        waitingForGame = socket.id;
-        nextGameId = randomId();
-        socket.join(nextGameId);
-        socket.emit("waiting");
-    } else {
-        socket.join(nextGameId);
-        var gameID = nextGameId;
+    socket.on("play",()=>{
+        var cookies = cookie.parse(socket.handshake.headers.cookie);
+        getScoketId.set(cookies.ID, socket.id);
+        if(now_playing.get(cookies.ID)){
+            var game = games.get(now_playing.get(cookies.ID));
+            socket.join(game.ID);
+            io.to(game.ID).emit("update", game.state);
+            if(cookies.ID == game.hasTurn)socket.emit("yourTurn");
+            else socket.emit("opponentsTurn");
 
-        io.to(gameID).emit("connected");
-
-        games.set(gameID, new Game(waitingForGame, socket.id, gameID));
-        now_playing.set(waitingForGame, gameID);
-        now_playing.set(socket.id, gameID);
-        waitingForGame = undefined;
-        nextGameId = undefined;
-    }
+            if(cookies.ID == game.name1)socket.emit("opponentName", game.name2);
+            else socket.emit("opponentName", game.name1);
+            game.dcCount--;
+        }
+        else if(!waitingForGame){
+            waitingForGame = cookies.ID;
+            waitingName = cookies.username;
+            nextGameId = randomId();
+            socket.join(nextGameId);
+            socket.emit("waiting");
+            console.log(waitingName + "is waiting for game");
+        } else {
+            console.log("connecting " + waitingName + " and " + cookies.username);
+            socket.join(nextGameId);
+            var gameID = nextGameId;
+            io.to(gameID).emit("connected");
+            games.set(gameID, new Game(waitingForGame, waitingName, cookies.ID, cookies.username, gameID));
+            socket.to(gameID).emit("opponentName", cookies.username);
+            socket.to(gameID).emit("yourTurn");
+            socket.emit("opponentName", waitingName);
+            socket.emit("opponentsTurn");
+            now_playing.set(waitingForGame, gameID);
+            now_playing.set(cookies.ID, gameID);
+            waitingForGame = undefined;
+            nextGameId = undefined;
+            waitingName = undefined;
+        }
+    })    
 
     socket.on("disconnect", ()=>{
-        if(socket.id == waitingForGame){
-            waitingForGame = undefined;
-        } else if (games.get(now_playing.get(socket.id))){
-            var game =  games.get(now_playing.get(socket.id));
-            socket.to(game.ID).emit("ragequit");
-            now_playing.delete(game.p1);
-            now_playing.delete(game.p2);
-            games.delete(game.ID);
-        }
+        if(socket.handshake.headers.cookie){
+            var cookies = cookie.parse(socket.handshake.headers.cookie);
+            if(cookies.ID == waitingForGame){
+                waitingForGame = undefined;
+            } else if (games.get(now_playing.get(cookies.ID))){
+                var game =  games.get(now_playing.get(cookies.ID));
+                game.dcCount++;
+                if(game.dcCount == 2){
+                    now_playing.delete(game.p1);
+                    now_playing.delete(game.p2);
+                    games.delete(game.ID);
+                }                
+            }    
+        }        
     })
 });
 

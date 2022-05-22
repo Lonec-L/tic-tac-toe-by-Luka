@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-tac-toe</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://kit.fontawesome.com/2259ba8b7b.js" crossorigin="anonymous"></script>
+    <script src="cookie.umd.min.js"></script>
+</head>
+<body onload="CheckId()">
+    <button id="PlayButton" onclick="playGame()">Play</button>
+    <div id="contentContainer">
+        <div id="player" class="username"></div>
+        <div id="gameContainer">
+            <div class="gameTile" onclick="sendMove(0)"></div>
+            <div class="gameTile" onclick="sendMove(1)"></div>
+            <div class="gameTile" onclick="sendMove(2)"></div>
+            <div class="gameTile" onclick="sendMove(3)"></div>
+            <div class="gameTile" onclick="sendMove(4)"></div>
+            <div class="gameTile" onclick="sendMove(5)"></div>
+            <div class="gameTile" onclick="sendMove(6)"></div>
+            <div class="gameTile" onclick="sendMove(7)"></div>
+            <div class="gameTile" onclick="sendMove(8)"></div>
+        </div>
+        <div id="opponent" class="username"></div> 
+    </div>
+    <div id="message"></div>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</html>
