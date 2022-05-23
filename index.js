@@ -19,7 +19,6 @@ const crypto = require("crypto");
 const randomId = () => crypto.randomBytes(8).toString("hex");
 
 const now_playing = new Map();
-const getScoketId = new Map();
 
 const cookie = require("cookie")
 
@@ -74,7 +73,6 @@ io.on('connection', (socket) => {
 
     socket.on("play",()=>{
         var cookies = cookie.parse(socket.handshake.headers.cookie);
-        getScoketId.set(cookies.ID, socket.id);
         if(!waitingForGame){
             waitingForGame = cookies.ID;
             waitingName = cookies.username;
