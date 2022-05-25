@@ -2,36 +2,39 @@ const socket = io();
 
 const message = document.getElementById("message")
 
+
+
 function CheckId(){
-    if(cookie.get("ID") != "undefined" && cookie.get("ID") != undefined){
-        console.log(socket.id);
-    } else {
-        location = "index.html";
+    if(!(cookie.get("ID") != "undefined" && cookie.get("ID") != undefined)){
+        const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+        modal.show();
     }
 }
 
-function skipLogin(){
-    if(cookie.get("ID") != "undefined" && cookie.get("ID") != undefined){
-        location = "test.html";
-    }
+function gameOver(msg){
+    const modal = new bootstrap.Modal(document.getElementById('gameOverModal'));
+    document.getElementById("gameOverText").innerHTML = msg;
+    modal.show();
 }
 
+function sendToast(){
+    const tmp = document.getElementById('toastMessage');
+    const toast = new bootstrap.Toast(tmp);
+    toast.show();
+}
 
 function play(){
     cookie.set("username", document.getElementById("nameInput").value);
-    cookie.set("ID", socket.id);    
-    location = "test.html";
+    cookie.set("ID", socket.id);
+    playGame();
 }
 
 function playGame(){
-    document.getElementById("PlayButton").style.display = "none";
     document.getElementById("player").innerHTML = cookie.get("username");
-    console.log("ree");
     socket.emit("play");
 }
 
 socket.on("reconnected", ()=>{
-    document.getElementById("PlayButton").style.display = "none";
     document.getElementById("player").innerHTML = cookie.get("username");
 })
 
@@ -43,30 +46,31 @@ socket.on("update", (state )=>{
     var tiles = document.getElementsByClassName("gameTile");
     for(var i = 0; i < 9; i++){
         if(state[i] == 1){
-            tiles[i].innerHTML = "<img src=\"x-lg.svg\" class=\"h-100 w-100\">";
+            tiles[i].innerHTML = "<img src=\"/assets/x-lg.svg\" class=\"h-100 w-100\">";
         } else if (state[i] == 2){
-            tiles[i].innerHTML = "<img src=\"circle.svg\" class=\"h-100 w-100\">";
+            tiles[i].innerHTML = "<img src=\"/assets/circle.svg\" class=\"h-100 w-100\">";
         }
     }
 });
 
-function refresh(){
-    location.reload();
+function clearTurn(){
+    document.getElementById("opponent").classList.remove("border-success");
+    document.getElementById("player").classList.remove("border-success");
 }
 
 socket.on("win", ()=>{
-    message.innerHTML = "WINNNER WINNER, CHICKEN DINNER!";
-    document.getElementById("PlayButton").style.display = "block";
+    clearTurn();
+    gameOver("WINNER WINNER, CHICKEN DINNER!");
 })
 
 socket.on("tie", ()=>{
-    message.innerHTML = "TIE :3";
-    document.getElementById("PlayButton").style.display = "block";
+    clearTurn();
+    gameOver("TIE :3");
 })
 
 socket.on("lose", ()=>{
-    message.innerHTML = "loser!";
-    document.getElementById("PlayButton").style.display = "block";
+    clearTurn();
+    gameOver("You\nLOSE!")
 })
 
 socket.on("opponentName",(name)=>{
@@ -85,19 +89,21 @@ socket.on("toggleTurn", ()=>{
 
 socket.on("opponentsTurn", ()=>{
     document.getElementById("opponent").classList.toggle("border-success");
-    console.log("Not Your turn");
 })
 
 socket.on("invalidMove", ()=>{
     message.innerHTML = "INVALID MOVE";
+    sendToast()
 })
 
 socket.on("notYourTurn", ()=>{
-    message.innerHTML = "not your turn m8";
+    message.innerHTML = "Wait for your turn";
+    sendToast()
 })
 
 socket.on("waiting", ()=>{
     message.innerHTML = "waiting for opponent!";
+    sendToast()
 })
 
 socket.on("connected", ()=>{
@@ -107,6 +113,7 @@ socket.on("connected", ()=>{
     }
     console.log(tiles);
     message.innerHTML = "playing against worthy opponent!";
+    sendToast()
 })
 
 function sendMove(tile){

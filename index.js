@@ -22,6 +22,33 @@ const now_playing = new Map();
 
 const cookie = require("cookie")
 
+function play(socket){
+    var cookies = cookie.parse(socket.handshake.headers.cookie);
+    if(!waitingForGame){
+        waitingForGame = cookies.ID;
+        waitingName = cookies.username;
+        nextGameId = randomId();
+        socket.join(nextGameId);
+        socket.emit("waiting");
+        console.log(waitingName + "is waiting for game");
+    } else {
+        console.log("connecting " + waitingName + " and " + cookies.username);
+        socket.join(nextGameId);
+        var gameID = nextGameId;
+        io.to(gameID).emit("connected");
+        games.set(gameID, new Game(waitingForGame, waitingName, cookies.ID, cookies.username, gameID));
+        socket.to(gameID).emit("opponentName", cookies.username);
+        socket.to(gameID).emit("yourTurn");
+        socket.emit("opponentName", waitingName);
+        socket.emit("opponentsTurn");
+        now_playing.set(waitingForGame, gameID);
+        now_playing.set(cookies.ID, gameID);
+        waitingForGame = undefined;
+        nextGameId = undefined;
+        waitingName = undefined;
+    }
+}
+
 io.on('connection', (socket) => {
     if(socket.handshake.headers.cookie){
         var cookies = cookie.parse(socket.handshake.headers.cookie);
@@ -37,6 +64,9 @@ io.on('connection', (socket) => {
             else socket.emit("opponentName", game.name1);
             game.dcCount--;
             socket.emit("reconnected");
+        }
+        else{
+            play(socket);
         }
     }
     
@@ -72,33 +102,9 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on("play",()=>{
-        console.log("play");
-        var cookies = cookie.parse(socket.handshake.headers.cookie);
-        if(!waitingForGame){
-            waitingForGame = cookies.ID;
-            waitingName = cookies.username;
-            nextGameId = randomId();
-            socket.join(nextGameId);
-            socket.emit("waiting");
-            console.log(waitingName + "is waiting for game");
-        } else {
-            console.log("connecting " + waitingName + " and " + cookies.username);
-            socket.join(nextGameId);
-            var gameID = nextGameId;
-            io.to(gameID).emit("connected");
-            games.set(gameID, new Game(waitingForGame, waitingName, cookies.ID, cookies.username, gameID));
-            socket.to(gameID).emit("opponentName", cookies.username);
-            socket.to(gameID).emit("yourTurn");
-            socket.emit("opponentName", waitingName);
-            socket.emit("opponentsTurn");
-            now_playing.set(waitingForGame, gameID);
-            now_playing.set(cookies.ID, gameID);
-            waitingForGame = undefined;
-            nextGameId = undefined;
-            waitingName = undefined;
-        }
-    })    
+    socket.on("play", ()=>{
+        play(socket);
+    });    
 
     socket.on("disconnect", ()=>{
         if(socket.handshake.headers.cookie){
