@@ -12,7 +12,7 @@ function CheckId(){
 
 function skipLogin(){
     if(cookie.get("ID") != "undefined" && cookie.get("ID") != undefined){
-        location = "game.html";
+        location = "test.html";
     }
 }
 
@@ -20,12 +20,13 @@ function skipLogin(){
 function play(){
     cookie.set("username", document.getElementById("nameInput").value);
     cookie.set("ID", socket.id);    
-    location = "game.html";
+    location = "test.html";
 }
 
 function playGame(){
     document.getElementById("PlayButton").style.display = "none";
     document.getElementById("player").innerHTML = cookie.get("username");
+    console.log("ree");
     socket.emit("play");
 }
 
@@ -39,12 +40,12 @@ socket.on("connect", () => {
 });
 
 socket.on("update", (state )=>{
-    var tiles = document.getElementById("gameContainer").children;
+    var tiles = document.getElementsByClassName("gameTile");
     for(var i = 0; i < 9; i++){
         if(state[i] == 1){
-            tiles[i].innerHTML = "<i class=\"fa-regular fa-circle\"></i>";
+            tiles[i].innerHTML = "<img src=\"x-lg.svg\" class=\"h-100 w-100\">";
         } else if (state[i] == 2){
-            tiles[i].innerHTML = "<i class=\"fa-solid fa-x\"></i>";
+            tiles[i].innerHTML = "<img src=\"circle.svg\" class=\"h-100 w-100\">";
         }
     }
 });
@@ -73,14 +74,17 @@ socket.on("opponentName",(name)=>{
 })
 
 socket.on("yourTurn", ()=>{
-    document.getElementById("player").style.backgroundColor = "greenyellow";
-    document.getElementById("opponent").style.backgroundColor = "white";
+    document.getElementById("player").classList.toggle("border-success");
     console.log("Your turn");
 })
 
+socket.on("toggleTurn", ()=>{
+    document.getElementById("opponent").classList.toggle("border-success");
+    document.getElementById("player").classList.toggle("border-success");
+})
+
 socket.on("opponentsTurn", ()=>{
-    document.getElementById("opponent").style.backgroundColor = "greenyellow";
-    document.getElementById("player").style.backgroundColor = "white";
+    document.getElementById("opponent").classList.toggle("border-success");
     console.log("Not Your turn");
 })
 

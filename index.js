@@ -49,8 +49,9 @@ io.on('connection', (socket) => {
         if(tmp == 1){
             io.to(game.ID).emit("update", game.state);
             game.flipTurn();
-            socket.to(game.ID).emit("yourTurn");
-            socket.emit("opponentsTurn");
+            io.to(game.ID).emit("toggleTurn");
+            //socket.to(game.ID).emit("yourTurn");
+            //socket.emit("opponentsTurn");
             var win = game.checkWin();
             if(win == -1){
                 io.to(game.ID).emit("tie");
@@ -72,6 +73,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on("play",()=>{
+        console.log("play");
         var cookies = cookie.parse(socket.handshake.headers.cookie);
         if(!waitingForGame){
             waitingForGame = cookies.ID;
