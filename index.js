@@ -29,7 +29,7 @@ const options = {
   url: 'https://stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
   headers: {
     'X-RapidAPI-Host': 'stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
-    'X-RapidAPI-Key': {KEY}
+    'X-RapidAPI-Key': ${{ secrets.RAPID_API_KEY }}
   }
 };
 
