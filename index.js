@@ -22,6 +22,19 @@ const now_playing = new Map();
 
 const cookie = require("cookie")
 
+const axios = require("axios");
+
+const options = {
+  method: 'GET',
+  url: 'https://stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
+  headers: {
+    'X-RapidAPI-Host': 'stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
+    'X-RapidAPI-Key': '6bf42255c6mshc654d270317c03dp12660bjsnc0ecc32947b2'
+  }
+};
+
+const saveUrl = 'https://stujo-tic-tac-toe-stujo-v1.p.rapidapi.com';
+
 function play(socket){
     var cookies = cookie.parse(socket.handshake.headers.cookie);
     if(!waitingForGame){
@@ -30,9 +43,13 @@ function play(socket){
         nextGameId = randomId();
         socket.join(nextGameId);
         socket.emit("waiting");
-        console.log(waitingName + "is waiting for game");
     } else {
-        console.log("connecting " + waitingName + " and " + cookies.username);
+        if(waitingForGame == cookies.ID){
+            waitingForGame = undefined;
+            nextGameId = undefined;
+            waitingName = undefined;
+            return;
+        }
         socket.join(nextGameId);
         var gameID = nextGameId;
         io.to(gameID).emit("connected");
@@ -47,6 +64,49 @@ function play(socket){
         nextGameId = undefined;
         waitingName = undefined;
     }
+}
+
+function updateGameState(game, socket){
+    var cookies = cookie.parse(socket.handshake.headers.cookie);
+    io.to(game.ID).emit("update", game.state);
+    game.flipTurn();
+    io.to(game.ID).emit("toggleTurn");
+    var win = game.checkWin();
+    if(win == -1){
+        io.to(game.ID).emit("tie");
+        now_playing.delete(game.p1);
+        if(game.p2 != "AI")now_playing.delete(game.p2);
+        games.delete(game.ID);
+        return;
+    } else if(win != 0){
+        if(game.p2 != "AI"){
+            socket.emit("win");
+            socket.to(game.ID).emit("lose");
+        } else {
+            if(win == 1){
+                socket.emit("win");
+            } else socket.emit("lose");
+        }        
+        now_playing.delete(game.p1);
+        if(game.p2 != "AI")now_playing.delete(game.p2);
+        games.delete(game.ID);
+        return;
+    }
+    return;
+}
+
+function playAI(socket){
+    var cookies = cookie.parse(socket.handshake.headers.cookie);
+    var gameID = randomId;
+    socket.join(gameID);
+    io.to(gameID).emit("connected");
+    games.set(gameID, new Game(cookies.ID, cookies.username, "AI", "Computer", gameID));
+    socket.emit("opponentName", "Computer");
+    socket.emit("yourTurn");
+    now_playing.set(cookies.ID, gameID);
+    waitingForGame = undefined;
+    nextGameId = undefined;
+    waitingName = undefined;
 }
 
 io.on('connection', (socket) => {
@@ -64,36 +124,30 @@ io.on('connection', (socket) => {
             else socket.emit("opponentName", game.name1);
             game.dcCount--;
             socket.emit("reconnected");
+        } else {
+            if(cookies.mode == "normal")play(socket);
+            else if(cookies.mode == "AI")playAI(socket);
         }
-        else{
-            play(socket);
-        }
-    }
-    
+    }    
 
     socket.on('move', (tile) => {
         var cookies = cookie.parse(socket.handshake.headers.cookie);
         var game = games.get(now_playing.get(cookies.ID));
         if(!game)return;
         var tmp = game.move(cookies.ID, tile);
+
         if(tmp == 1){
-            io.to(game.ID).emit("update", game.state);
-            game.flipTurn();
-            io.to(game.ID).emit("toggleTurn");
-            //socket.to(game.ID).emit("yourTurn");
-            //socket.emit("opponentsTurn");
-            var win = game.checkWin();
-            if(win == -1){
-                io.to(game.ID).emit("tie");
-                now_playing.delete(game.p1);
-                now_playing.delete(game.p2);
-                games.delete(game.ID);
-            } else if(win != 0){
-                socket.emit("win");
-                socket.to(game.ID).emit("lose");
-                now_playing.delete(game.p1);
-                now_playing.delete(game.p2);
-                games.delete(game.ID);
+            updateGameState(game, socket);
+            if(game.p2 == "AI"){
+                options.url += game.getStateAI();
+                axios.request(options).then((response)=>{
+                    if(game.hasTurn != "AI")game.flipTurn();
+                    game.move("AI", response.data.recommendation);
+                    updateGameState(game, socket);
+                    options.url = saveUrl;
+                }).catch(function (error) {
+                    console.error(error);
+                });                
             }
         } else if(tmp == 10){
             socket.emit("invalidMove");
@@ -101,10 +155,6 @@ io.on('connection', (socket) => {
             socket.emit("notYourTurn");
         }
     })
-
-    socket.on("play", ()=>{
-        play(socket);
-    });    
 
     socket.on("disconnect", ()=>{
         if(socket.handshake.headers.cookie){
@@ -116,7 +166,7 @@ io.on('connection', (socket) => {
                 game.dcCount++;
                 if(game.dcCount == 2){
                     now_playing.delete(game.p1);
-                    now_playing.delete(game.p2);
+                    if(game.p2 != "AI")now_playing.delete(game.p2);
                     games.delete(game.ID);
                 }                
             }    

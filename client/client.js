@@ -5,10 +5,16 @@ const message = document.getElementById("message")
 
 
 function CheckId(){
-    if(!(cookie.get("ID") != "undefined" && cookie.get("ID") != undefined)){
+    document.getElementById("player").innerHTML = cookie.get("username");
+    if(cookie.get("ID") == "undefined" || cookie.get("ID") == undefined){
         const modal = new bootstrap.Modal(document.getElementById('loginModal'));
         modal.show();
     }
+}
+
+function resetName(){
+    const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+    modal.show();
 }
 
 function gameOver(msg){
@@ -25,13 +31,28 @@ function sendToast(){
 
 function play(){
     cookie.set("username", document.getElementById("nameInput").value);
-    cookie.set("ID", socket.id);
+    if(document.getElementById("nameInput").value == ""){
+        cookie.set("username", "Anonymous");
+    }
+    if(cookie.get("ID") == "undefined" || cookie.get("ID") == undefined)cookie.set("ID", socket.id);
     playGame();
 }
 
 function playGame(){
+    cookie.set("mode", "normal");
+    document.location.reload();
+}
+    
+
+function playAI(){
+    cookie.set("username", document.getElementById("nameInput").value);
+    if(document.getElementById("nameInput").value == ""){
+        cookie.set("username", "Anonymous");
+    }
+    if(cookie.get("ID") == "undefined" || cookie.get("ID") == undefined)cookie.set("ID", socket.id);
+    cookie.set("mode", "AI");
+    document.location.reload();
     document.getElementById("player").innerHTML = cookie.get("username");
-    socket.emit("play");
 }
 
 socket.on("reconnected", ()=>{
@@ -79,7 +100,6 @@ socket.on("opponentName",(name)=>{
 
 socket.on("yourTurn", ()=>{
     document.getElementById("player").classList.toggle("border-success");
-    console.log("Your turn");
 })
 
 socket.on("toggleTurn", ()=>{
@@ -111,7 +131,6 @@ socket.on("connected", ()=>{
     for(var i = 0; i < tiles.length; i++){
         tiles[i].innerHTML = "";
     }
-    console.log(tiles);
     message.innerHTML = "playing against worthy opponent!";
     sendToast()
 })

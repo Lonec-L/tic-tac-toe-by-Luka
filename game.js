@@ -58,6 +58,23 @@ class Game{
         if(this.hasTurn == this.p1) this.hasTurn = this.p2;
         else this.hasTurn = this.p1;
     }
+
+    getStateAI(){
+        var tmp="/";
+        for(var i = 0; i < 9; i++){
+            if(this.state[i] == 0){
+                tmp += "-";
+            }
+            if(this.state[i] == 1){
+                tmp += "X";
+            }
+            if(this.state[i] == 2){
+                tmp += "O";
+            }
+        }
+        tmp += "/O";
+        return tmp;
+    }
 }
 
 module.exports = {
