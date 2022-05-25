@@ -30,8 +30,10 @@ function sendToast(){
 }
 
 function play(){
-    cookie.set("username", document.getElementById("nameInput").value);
-    if(document.getElementById("nameInput").value == ""){
+    if(cookie.get("username") == "undefined" || cookie.get("username") == undefined || document.getElementById("nameInput").value != ""){
+        cookie.set("username", document.getElementById("nameInput").value);
+    }
+    if(cookie.get("username") == ""){
         cookie.set("username", "Anonymous");
     }
     if(cookie.get("ID") == "undefined" || cookie.get("ID") == undefined)cookie.set("ID", socket.id);
@@ -45,8 +47,10 @@ function playGame(){
     
 
 function playAI(){
-    cookie.set("username", document.getElementById("nameInput").value);
-    if(document.getElementById("nameInput").value == ""){
+    if(cookie.get("username") == "undefined" || cookie.get("username") == undefined || document.getElementById("nameInput").value != ""){
+        cookie.set("username", document.getElementById("nameInput").value);
+    }
+    if(cookie.get("username") == ""){
         cookie.set("username", "Anonymous");
     }
     if(cookie.get("ID") == "undefined" || cookie.get("ID") == undefined)cookie.set("ID", socket.id);
