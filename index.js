@@ -104,9 +104,11 @@ function playAI(socket){
     socket.emit("opponentName", "Computer");
     socket.emit("yourTurn");
     now_playing.set(cookies.ID, gameID);
-    waitingForGame = undefined;
-    nextGameId = undefined;
-    waitingName = undefined;
+    if(waitingForGame == cookies.ID){
+        waitingForGame = undefined;
+        nextGameId = undefined;
+        waitingName = undefined;
+    }    
 }
 
 io.on('connection', (socket) => {
