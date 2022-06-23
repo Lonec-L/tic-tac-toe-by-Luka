@@ -58,7 +58,15 @@ class _TicTacToeState extends State<StatefulWidget>{
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text(m),
+            title: Center(
+              child: Text(m,
+                style: const TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: "Roboto",
+                ),
+              )
+            ),
             actions: <Widget>[
               TextButton(
                 child: const Text('Dismiss'),
@@ -70,6 +78,12 @@ class _TicTacToeState extends State<StatefulWidget>{
           );
         },
       );
+  }
+
+  void saveName(String name){
+    setState(() {
+      p1 = (name == "") ? "anonymous" : name;
+    });    
   }
 
   @override
@@ -167,12 +181,6 @@ class _TicTacToeState extends State<StatefulWidget>{
     socket.disconnect();
     myController.dispose();
     super.dispose();
-  }
-
-  void saveName(String name){
-    setState(() {
-      p1 = name;
-    });    
   }
 
   @override
