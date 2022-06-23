@@ -11,11 +11,11 @@ class TicTacToe extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'TicTacToe',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'TicTacToe'),
     );
   }
 }
@@ -41,6 +41,7 @@ class _TicTacToeState extends State<StatefulWidget>{
 
   bool enabled = false;
   bool clientHasTurn = true;
+  bool waiting = false;
 
   void _showDialog(String m){
     showDialog<void>(
@@ -131,7 +132,9 @@ class _TicTacToeState extends State<StatefulWidget>{
     });
 
     socket.on("waiting", (_){
-      print("waiting");
+      setState(() {
+        waiting = true;
+      });
     });
 
     socket.on("connected", (_){
@@ -139,6 +142,7 @@ class _TicTacToeState extends State<StatefulWidget>{
         for(var i = 0; i < 9; i++){
           gameState[i] = 0;
         }
+        waiting = false;
       });
     });
   }
@@ -255,17 +259,29 @@ class _TicTacToeState extends State<StatefulWidget>{
                                   ),
                                 ),
                               );
-                            }else{return GestureDetector(
-                                onTap: (){
-                                  if(enabled)socket.emit("move", i);
-                                },
-                                child: Container(
+                            }else{
+                              if(i == 4 && waiting){
+                                return Container(
                                   color: Colors.white,
-                                  child: const FittedBox(
-                                    fit: BoxFit.fill,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(20.0),
+                                    child: CircularProgressIndicator(),
                                   ),
-                                ),
-                              );
+                                );
+                              }
+                              else{
+                                return GestureDetector(
+                                  onTap: (){
+                                    if(enabled)socket.emit("move", i);
+                                  },
+                                  child: Container(
+                                    color: Colors.white,
+                                    child: const FittedBox(
+                                      fit: BoxFit.fill,
+                                    ),
+                                  ),
+                                );  
+                              }                              
                             }
                           }),
                         ),
