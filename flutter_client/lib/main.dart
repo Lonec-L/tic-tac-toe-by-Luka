@@ -32,6 +32,7 @@ class MyHomePage extends StatefulWidget {
 
 class _TicTacToeState extends State<StatefulWidget>{
   late io.Socket socket;
+  final myController = TextEditingController();
   List<int> gameState = [0,0,0,0,0,0,0,0,0];
   String p1 ="anonymous";
   String p2 = "anonymous";
@@ -42,6 +43,15 @@ class _TicTacToeState extends State<StatefulWidget>{
   bool enabled = false;
   bool clientHasTurn = true;
   bool waiting = false;
+
+  void clearBoard(){
+    setState(() {
+      for(var i = 0; i < 9; i++){
+        gameState[i] = 0;
+      }
+      waiting = false;
+    });
+  }
 
   void _showDialog(String m){
     showDialog<void>(
@@ -133,6 +143,10 @@ class _TicTacToeState extends State<StatefulWidget>{
 
     socket.on("waiting", (_){
       setState(() {
+        for(var i = 0; i < 9; i++){
+          gameState[i] = 0;
+        }
+        p2 = "Searching...";
         waiting = true;
       });
     });
@@ -143,6 +157,7 @@ class _TicTacToeState extends State<StatefulWidget>{
           gameState[i] = 0;
         }
         waiting = false;
+        enabled = true;
       });
     });
   }
@@ -150,6 +165,7 @@ class _TicTacToeState extends State<StatefulWidget>{
   @override
   void dispose() {
     socket.disconnect();
+    myController.dispose();
     super.dispose();
   }
 
@@ -175,18 +191,20 @@ class _TicTacToeState extends State<StatefulWidget>{
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: myController,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Enter your name',
                       ),
-                      onSubmitted: (String name) => saveName(name),
+                      onSubmitted: (name) => saveName(name),
                     ),
                   ),
                   ButtonBar(
                     children: [
                       ElevatedButton(onPressed: (){
                         mode = "normal";
-                        enabled = true;
+                        enabled = false;
+                        saveName(myController.text);
                         if(!socket.connected) {
                           socket.connect();
                         } else{
@@ -197,6 +215,7 @@ class _TicTacToeState extends State<StatefulWidget>{
                       OutlinedButton(onPressed: (){
                         mode = "AI";
                         enabled = true;
+                        saveName(myController.text);
                         if(!socket.connected) {
                           socket.connect();
                         } else{
