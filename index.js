@@ -6,7 +6,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
-app.use(express.static(__dirname + '/client'));
+app.use(express.static(__dirname + '/flutter_client/build/web/'));
 
 const { Game } = require('./game');
 
@@ -29,22 +29,21 @@ const options = {
   url: 'https://stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
   headers: {
     'X-RapidAPI-Host': 'stujo-tic-tac-toe-stujo-v1.p.rapidapi.com',
-    'X-RapidAPI-Key': 
+    'X-RapidAPI-Key': 'MY_API_KEY_1'
   }
 };
 
 const saveUrl = 'https://stujo-tic-tac-toe-stujo-v1.p.rapidapi.com';
 
 function play(socket){
-    var cookies = cookie.parse(socket.handshake.headers.cookie);
     if(!waitingForGame){
-        waitingForGame = cookies.ID;
-        waitingName = cookies.username;
+        waitingForGame = socket.playerID;
+        waitingName = socket.playerName;
         nextGameId = randomId();
         socket.join(nextGameId);
         socket.emit("waiting");
     } else {
-        if(waitingForGame == cookies.ID){
+        if(waitingForGame == socket.playerID){
             waitingForGame = undefined;
             nextGameId = undefined;
             waitingName = undefined;
@@ -53,13 +52,13 @@ function play(socket){
         socket.join(nextGameId);
         var gameID = nextGameId;
         io.to(gameID).emit("connected");
-        games.set(gameID, new Game(waitingForGame, waitingName, cookies.ID, cookies.username, gameID));
-        socket.to(gameID).emit("opponentName", cookies.username);
+        games.set(gameID, new Game(waitingForGame, waitingName, socket.playerID, socket.playerName, gameID));
+        socket.to(gameID).emit("opponentName", socket.playerName);
         socket.to(gameID).emit("yourTurn");
         socket.emit("opponentName", waitingName);
         socket.emit("opponentsTurn");
         now_playing.set(waitingForGame, gameID);
-        now_playing.set(cookies.ID, gameID);
+        now_playing.set(socket.playerID, gameID);
         waitingForGame = undefined;
         nextGameId = undefined;
         waitingName = undefined;
@@ -67,7 +66,6 @@ function play(socket){
 }
 
 function updateGameState(game, socket){
-    var cookies = cookie.parse(socket.handshake.headers.cookie);
     io.to(game.ID).emit("update", game.state);
     game.flipTurn();
     io.to(game.ID).emit("toggleTurn");
@@ -96,15 +94,15 @@ function updateGameState(game, socket){
 }
 
 function playAI(socket){
-    var cookies = cookie.parse(socket.handshake.headers.cookie);
     var gameID = randomId;
     socket.join(gameID);
     io.to(gameID).emit("connected");
-    games.set(gameID, new Game(cookies.ID, cookies.username, "AI", "Computer", gameID));
+    games.set(gameID, new Game(socket.playerID, socket.playerName, "AI", "Computer", gameID));
     socket.emit("opponentName", "Computer");
     socket.emit("yourTurn");
-    now_playing.set(cookies.ID, gameID);
-    if(waitingForGame == cookies.ID){
+    games.get(gameID).dcCount = 1;
+    now_playing.set(socket.playerID, gameID);
+    if(waitingForGame == socket.playerID){
         waitingForGame = undefined;
         nextGameId = undefined;
         waitingName = undefined;
@@ -112,35 +110,35 @@ function playAI(socket){
 }
 
 io.on('connection', (socket) => {
-    if(socket.handshake.headers.cookie){
-        var cookies = cookie.parse(socket.handshake.headers.cookie);
-        var game = games.get(now_playing.get(cookies.ID));
-        if(now_playing.get(cookies.ID)){
-            var game = games.get(now_playing.get(cookies.ID));
+    socket.on("player_info", (id, pName, mode) => {
+        socket.playerID = id;
+        socket.playerName = pName;
+        socket.gameMode = mode;
+
+        if(now_playing.get(socket.playerID)){
+            var game = games.get(now_playing.get(socket.playerID));
             socket.join(game.ID);
             io.to(game.ID).emit("update", game.state);
-            if(cookies.ID == game.hasTurn)socket.emit("yourTurn");
+            if(socket.playerID == game.hasTurn)socket.emit("yourTurn");
             else socket.emit("opponentsTurn");
-
-            if(cookies.ID == game.p1)socket.emit("opponentName", game.name2);
+    
+            if(socket.playerID == game.p1)socket.emit("opponentName", game.name2);
             else socket.emit("opponentName", game.name1);
             game.dcCount--;
             socket.emit("reconnected");
         } else {
-            if(cookies.mode == "normal")play(socket);
-            else if(cookies.mode == "AI")playAI(socket);
+            if(socket.gameMode == "normal")play(socket);
+            else if(socket.gameMode == "AI")playAI(socket);
         }
-    }    
+    })
 
     socket.on('move', (tile) => {
-        var cookies = cookie.parse(socket.handshake.headers.cookie);
-        var game = games.get(now_playing.get(cookies.ID));
+        var game = games.get(now_playing.get(socket.playerID));
         if(!game)return;
-        var tmp = game.move(cookies.ID, tile);
-
+        var tmp = game.move(socket.playerID, tile);
         if(tmp == 1){
             updateGameState(game, socket);
-            if(game.p2 == "AI"){
+            if(game.p2 == "AI" && games.get(now_playing.get(socket.playerID))){
                 options.url += game.getStateAI();
                 axios.request(options).then((response)=>{
                     if(game.hasTurn != "AI")game.flipTurn();
@@ -159,26 +157,23 @@ io.on('connection', (socket) => {
     })
 
     socket.on("disconnect", ()=>{
-        if(socket.handshake.headers.cookie){
-            var cookies = cookie.parse(socket.handshake.headers.cookie);
-            if(cookies.ID == waitingForGame){
-                waitingForGame = undefined;
-            } else if (games.get(now_playing.get(cookies.ID))){
-                var game =  games.get(now_playing.get(cookies.ID));
-                game.dcCount++;
-                if(game.dcCount == 2){
-                    now_playing.delete(game.p1);
-                    if(game.p2 != "AI")now_playing.delete(game.p2);
-                    games.delete(game.ID);
-                }                
-            }    
-        }        
+        if(socket.playerID == waitingForGame){
+            waitingForGame = undefined;
+        } else if (games.get(now_playing.get(socket.playerID))){
+            var game =  games.get(now_playing.get(socket.playerID));
+            game.dcCount++;
+            if(game.dcCount == 2){
+                now_playing.delete(game.p1);
+                if(game.p2 != "AI")now_playing.delete(game.p2);
+                games.delete(game.ID);
+            }                
+        }    
     })
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/client/index.html');
-});
+// app.get('/', (req, res) => {
+//     res.sendFile(__dirname + '/flutter_client/build/web/index.html');
+// });
 
 server.listen(3000, () => {
     console.log('listening on *:3000');
